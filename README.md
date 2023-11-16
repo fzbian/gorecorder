@@ -28,7 +28,11 @@ or use the releases
 
 ## Demostration
 
-video
+
+
+https://github.com/fzbian/gorecorder/assets/66271721/53d94f96-ea84-4ca7-abd7-015bd968595c
+
+
 
 ## Usage example
 
