@@ -1,12 +1,13 @@
 <div align="center">
 <pre>
 
-░██████╗░░█████╗░██████╗░███████╗░█████╗░░█████╗░██████╗░██████╗░███████╗██████╗░
-██╔════╝░██╔══██╗██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗
-██║░░██╗░██║░░██║██████╔╝█████╗░░██║░░╚═╝██║░░██║██████╔╝██║░░██║█████╗░░██████╔╝
-██║░░╚██╗██║░░██║██╔══██╗██╔══╝░░██║░░██╗██║░░██║██╔══██╗██║░░██║██╔══╝░░██╔══██╗
-╚██████╔╝╚█████╔╝██║░░██║███████╗╚█████╔╝╚█████╔╝██║░░██║██████╔╝███████╗██║░░██║
-░╚═════╝░░╚════╝░╚═╝░░╚═╝╚══════╝░╚════╝░░╚════╝░╚═╝░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝
+███████╗ ██████╗██████╗ ███████╗███╗   ██╗ ██████╗  ██████╗ 
+██╔════╝██╔════╝██╔══██╗██╔════╝████╗  ██║██╔════╝ ██╔═══██╗
+███████╗██║     ██████╔╝█████╗  ██╔██╗ ██║██║  ███╗██║   ██║
+╚════██║██║     ██╔══██╗██╔══╝  ██║╚██╗██║██║   ██║██║   ██║
+███████║╚██████╗██║  ██║███████╗██║ ╚████║╚██████╔╝╚██████╔╝
+╚══════╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝ 
+                                                            
 ---------------------------------------------------
 go cli program to make screenshots
 </pre>
@@ -19,50 +20,44 @@ Do you use a distribution without a pre-installed screenshot? use this program
 use the go installer to get the program
 
 ```
-go install https://github.com/fzbian/gorecorder
+go install https://github.com/fzbian/screengo
 ```
 
 or use the releases
 
-[Releases](https://github.com/fzbian/gorecorder/releases)
+[Releases](https://github.com/fzbian/screengo/releases)
 
 ## Demostration
 
-
-
-https://github.com/fzbian/gorecorder/assets/66271721/53d94f96-ea84-4ca7-abd7-015bd968595c
-
-
+https://github.com/fzbian/screengo/assets/66271721/53d94f96-ea84-4ca7-abd7-015bd968595c
 
 ## Usage example
 
 To get help with commandline arguments
-
 ```
-gorecorder -h
+screengo -h
 ```
 
 List avaliable screens
 ```
-gorecorder -l
+screengo -l
 ```
 
 Simple screenshot with screen argument
-
 ```
-gorecorder <screenId>
+screengo <screenId>
 ```
 
 Screenshot with screen argument and output file name
 
 ```
-gorecorder <screenId> <outputFileName>
+screengo <screenId> <outputFileName>
 ```
 
 Screenshot with screen argument, output file name and delay in seconds
 
 ```
-gorecorder <screenId> <outputFileName> <delaySeconds>
+screengo <screenId> <outputFileName> <delaySeconds>
 ```
 
 ## Contributing
