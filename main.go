@@ -2,143 +2,133 @@ package main
 
 import (
 	"fmt"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
+	"github.com/kbinani/screenshot"
 	"image/jpeg"
 	"os"
-	"time"
-
-	"github.com/kbinani/screenshot"
 )
 
+var actualScreen int
+var qualityScreenshot int
+
 func main() {
-	if len(os.Args) == 1 {
-		help()
-		return
-	}
-	if os.Args[1] == "-h" || os.Args[1] == "--help" {
-		help()
-		return
-	}
-	if os.Args[1] == "-l" || os.Args[1] == "--list" {
-		getAvaliableScreens()
-		return
-	}
-	if len(os.Args) == 2 {
-		screen, err := stringToInt(os.Args[1])
-		if err != nil {
-			fmt.Println("Invalid screen id")
-			return
-		}
-		result, err := captureScreenshot(screen, "screenshot")
-		if err != nil {
-			if err.Error() == "GetDIBits failed" {
-				fmt.Println("Invalid screen id")
-				return
-			} else {
-				fmt.Printf("Error capturing screenshot: %s\n", err.Error())
-				return
+	myApp := app.New()
+	myWindow := myApp.NewWindow("My Screen")
+	myWindow.Resize(fyne.NewSize(500, 300))
+	myWindow.SetFixedSize(true)
+	myWindow.SetContent(container.NewVBox(selectWindowContainer(), selectQualityContainer(), captureWindowContainer()))
+	myWindow.ShowAndRun()
+}
+
+func selectWindowContainer() *fyne.Container {
+	screensStr := getAvaliableScreens()
+	windowSelect := widget.NewSelect(screensStr, func(value string) {
+		for i, screen := range screensStr {
+			if screen == value {
+				actualScreen = i
+				break
 			}
 		}
-		fmt.Println(result)
-		return
+	})
+	windowSelect.Selected = screensStr[0]
+	return container.NewVBox(
+		widget.NewLabel("Select a screen"),
+		windowSelect,
+	)
+}
+
+func captureWindowContainer() *fyne.Container {
+	output := widget.NewEntry()
+	output.SetPlaceHolder("Output file name (default: screenshot.jpg)")
+	output.OnChanged = func(value string) {
+		output.SetText(value)
 	}
-	if len(os.Args) == 3 {
-		screen, err := stringToInt(os.Args[1])
-		if err != nil {
-			fmt.Println("Invalid screen id")
-			return
-		}
-		result, err := captureScreenshot(screen, os.Args[2])
-		if err != nil {
-			if err.Error() == "GetDIBits failed" {
-				fmt.Println("Invalid screen id")
-				return
-			} else {
-				fmt.Printf("Error capturing screenshot: %s\n", err.Error())
-				return
+	responseContainer := container.NewVBox(widget.NewLabel(""))
+	return container.NewVBox(
+		widget.NewLabel("Output file name"),
+		output,
+		widget.NewButton("Capture", func() {
+			msg, err := captureScreenshot(actualScreen, output.Text)
+			if err != nil {
+				widget.NewLabel(err.Error())
 			}
-		}
-		fmt.Println(result)
-		return
-	}
-	if len(os.Args) == 4 {
-		screen, err := stringToInt(os.Args[1])
-		if err != nil {
-			fmt.Println("Invalid screen id")
-			return
-		}
-		delay, err := stringToInt(os.Args[3])
-		if err != nil {
-			fmt.Println("Invalid delay")
-			return
-		}
-		countdown(delay)
-		time.Sleep(time.Duration(delay) * time.Second)
-		result, err := captureScreenshot(screen, os.Args[2])
-		if err != nil {
-			if err.Error() == "GetDIBits failed" {
-				fmt.Println("Invalid screen id")
-				return
-			} else {
-				fmt.Printf("Error capturing screenshot: %s\n", err.Error())
-				return
-			}
-		}
-		fmt.Println(result)
-		return
-	}
+			responseContainer.Objects[0] = widget.NewLabel(msg)
+			responseContainer.Refresh()
+		}), responseContainer,
+	)
 }
 
-func help() {
-	fmt.Println("Usage: gorecorder [arguments]")
-	fmt.Println("Arguments:")
-	fmt.Println("-h or --help: Print help")
-	fmt.Println("-l or --list: List avaliable screens")
-	fmt.Println("(screen id): Capture screenshot from the screen id")
-	fmt.Println("(screen id) (output file name): Capture screenshot from the screen id and save it to the output file name")
-	fmt.Println("(screen id) (output file name) (delay in seconds): Capture screenshot from the screen id and save it to the output file name after the delay in seconds")
-	fmt.Println("Example: gorecorder 0 screenshot 5")
+func selectQualityContainer() *fyne.Container {
+	quality := widget.NewSelect([]string{"Low", "Medium", "High"}, func(value string) {
+		switch value {
+		case "Low":
+			qualityScreenshot = 10
+		case "Medium":
+			qualityScreenshot = 50
+		case "High":
+			qualityScreenshot = 100
+		}
+	})
+	quality.Selected = "High"
+	return container.NewVBox(
+		widget.NewLabel("Select a quality"),
+		quality,
+	)
 }
 
-func countdown(seconds int) {
-	for i := seconds; i > 0; i-- {
-		fmt.Printf("Taking in... %d", i)
-		time.Sleep(time.Second)
-		fmt.Printf("\r")
-	}
-	fmt.Printf("Say cheese!")
-	fmt.Printf("\r")
-}
-
-func stringToInt(str string) (int, error) {
-	var num int
-	_, err := fmt.Sscanf(str, "%d", &num)
-	if err != nil {
-		return 0, err
-	}
-	return num, nil
-}
-
-func getAvaliableScreens() {
+func getAvaliableScreens() []string {
 	n := screenshot.NumActiveDisplays()
-	fmt.Printf("Active displays: %d\n", n)
+	screensStr := make([]string, n)
 	for i := 0; i < n; i++ {
 		bounds := screenshot.GetDisplayBounds(i)
-		fmt.Printf("Id: '%d', Bounds '%v'\n", i, bounds)
+		infoScreen := fmt.Sprintf("Id: '%d', Bounds '%v'\n", i, bounds)
+		screensStr[i] = infoScreen
 	}
+	return screensStr
 }
 
 func captureScreenshot(screen int, output string) (string, error) {
+	if output == "" {
+		outputFileNameDefault := fmt.Sprintf("screenshot_(%d)", screen)
+		output = outputFileNameDefault
+	}
+
+	fileName := fmt.Sprintf("%s.jpg", output)
+	counter := 1
+	for fileExists(fileName) {
+		fileName = fmt.Sprintf("%s(%d).jpg", output, counter)
+		counter++
+	}
+
 	bounds := screenshot.GetDisplayBounds(screen)
 	img, err := screenshot.CaptureRect(bounds)
 	if err != nil {
 		return "", err
 	}
-	fileName := fmt.Sprintf("%s.jpg", output)
+
 	file, err := os.Create(fileName)
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
-	jpeg.Encode(file, img, &jpeg.Options{Quality: 80})
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			panic(err.Error())
+		}
+	}(file)
+
+	err = jpeg.Encode(file, img, &jpeg.Options{Quality: qualityScreenshot})
+	if err != nil {
+		return "", err
+	}
+
 	return "Screenshot saved to " + fileName, nil
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil || !os.IsNotExist(err)
 }
