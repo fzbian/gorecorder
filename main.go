@@ -12,12 +12,12 @@ import (
 )
 
 var actualScreen int
-var qualityScreenshot int
+var defaultQualityScreenshot = 80
 
 func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("My Screen")
-	myWindow.Resize(fyne.NewSize(500, 300))
+	myWindow.Resize(fyne.NewSize(520, 320))
 	myWindow.SetFixedSize(true)
 	myWindow.SetContent(container.NewVBox(selectWindowContainer(), selectQualityContainer(), captureWindowContainer()))
 	myWindow.ShowAndRun()
@@ -43,9 +43,6 @@ func selectWindowContainer() *fyne.Container {
 func captureWindowContainer() *fyne.Container {
 	output := widget.NewEntry()
 	output.SetPlaceHolder("Output file name (default: screenshot.jpg)")
-	output.OnChanged = func(value string) {
-		output.SetText(value)
-	}
 	responseContainer := container.NewVBox(widget.NewLabel(""))
 	return container.NewVBox(
 		widget.NewLabel("Output file name"),
@@ -53,7 +50,8 @@ func captureWindowContainer() *fyne.Container {
 		widget.NewButton("Capture", func() {
 			msg, err := captureScreenshot(actualScreen, output.Text)
 			if err != nil {
-				widget.NewLabel(err.Error())
+				responseContainer.Objects[0] = widget.NewLabel(err.Error())
+				responseContainer.Refresh()
 			}
 			responseContainer.Objects[0] = widget.NewLabel(msg)
 			responseContainer.Refresh()
@@ -65,11 +63,11 @@ func selectQualityContainer() *fyne.Container {
 	quality := widget.NewSelect([]string{"Low", "Medium", "High"}, func(value string) {
 		switch value {
 		case "Low":
-			qualityScreenshot = 10
+			defaultQualityScreenshot = 10
 		case "Medium":
-			qualityScreenshot = 50
+			defaultQualityScreenshot = 50
 		case "High":
-			qualityScreenshot = 100
+			defaultQualityScreenshot = 80
 		}
 	})
 	quality.Selected = "High"
@@ -120,7 +118,7 @@ func captureScreenshot(screen int, output string) (string, error) {
 		}
 	}(file)
 
-	err = jpeg.Encode(file, img, &jpeg.Options{Quality: qualityScreenshot})
+	err = jpeg.Encode(file, img, &jpeg.Options{Quality: defaultQualityScreenshot})
 	if err != nil {
 		return "", err
 	}
