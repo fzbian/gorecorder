@@ -9,6 +9,7 @@ import (
 	"github.com/kbinani/screenshot"
 	"image"
 	"image/jpeg"
+	"image/png"
 	"os"
 )
 
@@ -21,7 +22,15 @@ var myWindow = myApp.NewWindow("ScreenGo")
 func main() {
 	myWindow.Resize(fyne.NewSize(520, 320))
 	myWindow.SetFixedSize(true)
-	myWindow.SetContent(container.NewVBox(selectWindowContainer(), selectQualityContainer(), captureWindowContainer()))
+	myWindow.SetContent(container.NewVBox(
+		selectWindowContainer(),
+		widget.NewSeparator(),
+		selectQualityContainer(),
+		widget.NewSeparator(),
+		selectFileTypeContainer(),
+		widget.NewSeparator(),
+		captureWindowContainer(),
+	))
 	myWindow.ShowAndRun()
 }
 
@@ -40,6 +49,24 @@ func selectWindowContainer() *fyne.Container {
 		widget.NewLabel("Select a screen"),
 		windowSelect,
 	)
+}
+
+var defaultFileTypeScreenshot = "png"
+
+func selectFileTypeContainer() *fyne.Container {
+	fileTypes := widget.NewRadioGroup([]string{"png", "jpg"}, func(value string) {
+		switch value {
+		case "png":
+			defaultFileTypeScreenshot = "png"
+		case "jpg":
+			defaultFileTypeScreenshot = "jpg"
+		}
+	})
+	fileTypes.Selected = "png"
+	fileTypes.Horizontal = true
+	return container.NewVBox(
+		widget.NewLabel("Select the filetype"),
+		fileTypes)
 }
 
 func captureWindowContainer() *fyne.Container {
@@ -62,7 +89,7 @@ func captureWindowContainer() *fyne.Container {
 }
 
 func selectQualityContainer() *fyne.Container {
-	quality := widget.NewSelect([]string{"Low", "Medium", "High"}, func(value string) {
+	quality := widget.NewRadioGroup([]string{"Low", "Medium", "High"}, func(value string) {
 		switch value {
 		case "Low":
 			defaultQualityScreenshot = 10
@@ -73,6 +100,7 @@ func selectQualityContainer() *fyne.Container {
 		}
 	})
 	quality.Selected = "High"
+	quality.Horizontal = true
 	return container.NewVBox(
 		widget.NewLabel("Select a quality"),
 		quality,
@@ -87,7 +115,7 @@ func getAvaliableScreens() []string {
 		infoScreen := fmt.Sprintf("Id: %d, Bounds: %v", i, bounds)
 		screensStr[i] = infoScreen
 	}
-	
+
 	return screensStr
 }
 
@@ -98,7 +126,7 @@ func captureScreenshot(screen int, fileName string) (string, error) {
 		return "", err
 	}
 
-	fileCreatorResponse, err := createFile(fileName, img)
+	fileCreatorResponse, err := createFile(fileName, img, defaultFileTypeScreenshot)
 	if err != nil {
 		return "", nil
 	}
@@ -106,35 +134,61 @@ func captureScreenshot(screen int, fileName string) (string, error) {
 	return fileCreatorResponse, nil
 }
 
-func createFile(fileName string, img *image.RGBA) (string, error) {
+func createFile(fileName string, img *image.RGBA, fileType string) (string, error) {
 	if fileName == "" {
 		fileName = "screenshot"
 	}
 
-	attempt := 1
-	baseFileName := fileName
-	for fileExists(fileName + ".jpg") {
-		fileName = fmt.Sprintf("%s (%d)", baseFileName, attempt)
-		attempt++
-	}
-
-	file, err := os.Create(fileName + ".jpg")
-	if err != nil {
-		return "", err
-	}
-	defer func(file *os.File) {
-		err = file.Close()
-		if err != nil {
-			panic(err.Error())
+	switch fileType {
+	case "jpg":
+		attempt := 1
+		baseFileName := fileName
+		for fileExists(fileName + ".jpg") {
+			fileName = fmt.Sprintf("%s (%d)", baseFileName, attempt)
+			attempt++
 		}
-	}(file)
 
-	err = jpeg.Encode(file, img, &jpeg.Options{Quality: defaultQualityScreenshot})
-	if err != nil {
-		return "", err
+		file, err := os.Create(fileName + ".jpg")
+		if err != nil {
+			return "", err
+		}
+		defer func(file *os.File) {
+			err = file.Close()
+			if err != nil {
+				panic(err.Error())
+			}
+		}(file)
+
+		err = jpeg.Encode(file, img, &jpeg.Options{Quality: defaultQualityScreenshot})
+		if err != nil {
+			return "", err
+		}
+	case "png":
+		attempt := 1
+		baseFileName := fileName
+		for fileExists(fileName + ".png") {
+			fileName = fmt.Sprintf("%s (%d)", baseFileName, attempt)
+			attempt++
+		}
+
+		file, err := os.Create(fileName + ".png")
+		if err != nil {
+			return "", err
+		}
+		defer func(file *os.File) {
+			err = file.Close()
+			if err != nil {
+				panic(err.Error())
+			}
+		}(file)
+
+		err = png.Encode(file, img)
+		if err != nil {
+			return "", err
+		}
 	}
 
-	return "Screenshot saved to " + fileName + ".jpg", nil
+	return "Screenshot saved to " + fileName + "." + fileType, nil
 }
 
 func fileExists(filename string) bool {
