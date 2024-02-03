@@ -84,9 +84,10 @@ func getAvaliableScreens() []string {
 	screensStr := make([]string, n)
 	for i := 0; i < n; i++ {
 		bounds := screenshot.GetDisplayBounds(i)
-		infoScreen := fmt.Sprintf("Id: '%d', Bounds '%v'\n", i, bounds)
+		infoScreen := fmt.Sprintf("Id: %d, Bounds: %v", i, bounds)
 		screensStr[i] = infoScreen
 	}
+	
 	return screensStr
 }
 
