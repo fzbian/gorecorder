@@ -5,9 +5,9 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/kbinani/screenshot"
+	"image"
 	"image/jpeg"
 	"os"
 )
@@ -16,14 +16,12 @@ var actualScreen int
 var defaultQualityScreenshot = 80
 
 var myApp = app.New()
-var myWindow = myApp.NewWindow("My Screen")
+var myWindow = myApp.NewWindow("ScreenGo")
 
 func main() {
-	//myApp := app.New()
-	//myWindow := myApp.NewWindow("My Screen")
 	myWindow.Resize(fyne.NewSize(520, 320))
 	myWindow.SetFixedSize(true)
-	myWindow.SetContent(container.NewVBox(selectWindowContainer(), selectQualityContainer(), selectOutputFolder(), captureWindowContainer()))
+	myWindow.SetContent(container.NewVBox(selectWindowContainer(), selectQualityContainer(), captureWindowContainer()))
 	myWindow.ShowAndRun()
 }
 
@@ -81,32 +79,6 @@ func selectQualityContainer() *fyne.Container {
 	)
 }
 
-var outputFolder fyne.ListableURI
-var outputFolderLabel = widget.NewLabel("Output folder: No selected")
-
-func selectOutputFolder() *fyne.Container {
-	openDialog := dialog.NewFolderOpen(func(uri fyne.ListableURI, err error) {
-		if err != nil {
-			dialog.ShowError(err, myWindow)
-			return
-		}
-		if uri == nil {
-			dialog.ShowError(fmt.Errorf("No folder selected"), myWindow)
-			return
-		}
-		outputFolder = uri
-		outputFolderLabel.SetText("Output folder: " + uri.String())
-	}, myWindow)
-
-	return container.NewVBox(
-		widget.NewLabel("Select a folder"),
-		outputFolderLabel,
-		widget.NewButton("Open Folder Dialog", func() {
-			openDialog.Show()
-		}),
-	)
-}
-
 func getAvaliableScreens() []string {
 	n := screenshot.NumActiveDisplays()
 	screensStr := make([]string, n)
@@ -118,29 +90,34 @@ func getAvaliableScreens() []string {
 	return screensStr
 }
 
-func captureScreenshot(screen int, output string) (string, error) {
-	if output == "" {
-		outputFileNameDefault := fmt.Sprintf("screenshot_(%d)", screen)
-		output = outputFileNameDefault
-	}
-
-	fileName := fmt.Sprintf("%s.jpg", output)
-	counter := 1
-	for fileExists(fileName) {
-		fileName = fmt.Sprintf("%s(%d).jpg", output, counter)
-		counter++
-	}
-
-	outputPath := outputFolder.String() + "/" + fileName
-	fmt.Println(outputPath)
-
+func captureScreenshot(screen int, fileName string) (string, error) {
 	bounds := screenshot.GetDisplayBounds(screen)
 	img, err := screenshot.CaptureRect(bounds)
 	if err != nil {
 		return "", err
 	}
 
-	file, err := os.Create(outputPath)
+	fileCreatorResponse, err := createFile(fileName, img)
+	if err != nil {
+		return "", nil
+	}
+
+	return fileCreatorResponse, nil
+}
+
+func createFile(fileName string, img *image.RGBA) (string, error) {
+	if fileName == "" {
+		fileName = "screenshot"
+	}
+
+	attempt := 1
+	baseFileName := fileName
+	for fileExists(fileName + ".jpg") {
+		fileName = fmt.Sprintf("%s (%d)", baseFileName, attempt)
+		attempt++
+	}
+
+	file, err := os.Create(fileName + ".jpg")
 	if err != nil {
 		return "", err
 	}
@@ -156,7 +133,7 @@ func captureScreenshot(screen int, output string) (string, error) {
 		return "", err
 	}
 
-	return "Screenshot saved to " + fileName, nil
+	return "Screenshot saved to " + fileName + ".jpg", nil
 }
 
 func fileExists(filename string) bool {
