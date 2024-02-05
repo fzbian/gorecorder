@@ -1,16 +1,21 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/kbinani/screenshot"
+	"golang.design/x/clipboard"
 	"image"
 	"image/jpeg"
 	"image/png"
+	"log"
 	"os"
+	"time"
 )
 
 var actualScreen int
@@ -70,21 +75,62 @@ func selectFileTypeContainer() *fyne.Container {
 }
 
 func captureWindowContainer() *fyne.Container {
-	output := widget.NewEntry()
-	output.SetPlaceHolder("Output file name (default: screenshot.jpg)")
 	responseContainer := container.NewVBox(widget.NewLabel(""))
-	return container.NewVBox(
-		widget.NewLabel("Output file name"),
-		output,
-		widget.NewButton("Capture", func() {
-			msg, err := captureScreenshot(actualScreen, output.Text)
-			if err != nil {
-				responseContainer.Objects[0] = widget.NewLabel(err.Error())
+
+	return container.NewHBox(
+		widget.NewButton("Capture and save as", func() {
+			dialog := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
+				if writer == nil {
+					return
+				}
+				if err != nil {
+					log.Panic(err.Error())
+				}
+				defer func(writer fyne.URIWriteCloser) {
+					err := writer.Close()
+					if err != nil {
+						log.Panic(err.Error())
+					}
+				}(writer)
+				myWindow.Hide()
+				toBytes, err := captureToBytes(actualScreen)
+				if err != nil {
+					log.Panic(err.Error())
+				}
+				n, err := writer.Write(toBytes)
+				if err != nil {
+					log.Panic(err.Error())
+				}
+				go func() {
+					time.Sleep(1 * time.Second)
+					myWindow.Show()
+				}()
+				println(fmt.Sprintf("writed %d bytes", n))
+				responseContainer.Objects[0] = widget.NewLabel("Screenshot saved")
 				responseContainer.Refresh()
+			}, myWindow)
+			dialog.SetFileName(fmt.Sprintf("screenshot.%s", defaultFileTypeScreenshot))
+			dialog.Show()
+		}),
+		widget.NewButton("Copy to clipboard", func() {
+			myWindow.Hide()
+			toBytes, err := captureToBytes(actualScreen)
+			if err != nil {
+				log.Panic(err.Error())
 			}
-			responseContainer.Objects[0] = widget.NewLabel(msg)
+			err = clipboard.Init()
+			if err != nil {
+				log.Panic(err.Error())
+			}
+			clipboard.Write(clipboard.FmtImage, toBytes)
+			go func() {
+				time.Sleep(1 * time.Second)
+				myWindow.Show()
+			}()
+			responseContainer.Objects[0] = widget.NewLabel("Screenshot copied to clipboard")
 			responseContainer.Refresh()
-		}), responseContainer,
+		}),
+		responseContainer,
 	)
 }
 
@@ -119,19 +165,18 @@ func getAvaliableScreens() []string {
 	return screensStr
 }
 
-func captureScreenshot(screen int, fileName string) (string, error) {
+func captureToBytes(screen int) ([]byte, error) {
 	bounds := screenshot.GetDisplayBounds(screen)
 	img, err := screenshot.CaptureRect(bounds)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	fileCreatorResponse, err := createFile(fileName, img, defaultFileTypeScreenshot)
+	imageBytes, err := imageToBytes(*img)
 	if err != nil {
-		return "", nil
+		return nil, err
 	}
-
-	return fileCreatorResponse, nil
+	return imageBytes, nil
 }
 
 func createFile(fileName string, img *image.RGBA, fileType string) (string, error) {
@@ -189,6 +234,18 @@ func createFile(fileName string, img *image.RGBA, fileType string) (string, erro
 	}
 
 	return "Screenshot saved to " + fileName + "." + fileType, nil
+}
+
+func imageToBytes(img image.RGBA) ([]byte, error) {
+	var imgBytes []byte
+	buffer := new(bytes.Buffer)
+	err := png.Encode(buffer, &img)
+	if err != nil {
+		return nil, err
+	}
+	imgBytes = buffer.Bytes()
+
+	return imgBytes, nil
 }
 
 func fileExists(filename string) bool {
