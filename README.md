@@ -4,4 +4,4 @@ A simple screenshot software created in Go!
 
 ## Screenshots
 
-![App Screenshot](https://i.imgur.com/wXMHpzh.png)
+![App Screenshot](https://i.imgur.com/FiYulnP.png)
