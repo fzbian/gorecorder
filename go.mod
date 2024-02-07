@@ -1,4 +1,4 @@
-module github.com/fzbian/gorecorder
+module github.com/fzbian/screengo
 
 go 1.21.4
 
